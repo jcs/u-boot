@@ -277,22 +277,19 @@ static u32 rkclk_pll_get_rate(struct rk3128_cru *cru,
 	}
 }
 
-static ulong rockchip_mmc_get_clk(struct rk3128_cru *cru, uint clk_general_rate,
-				  int periph)
+static ulong rk3128_mmc_get_clk(struct rk3128_cru *cru, uint clk_general_rate,
+				int periph)
 {
 	uint src_rate;
 	uint div, mux;
 	u32 con;
 
 	switch (periph) {
-	case HCLK_EMMC:
 	case SCLK_EMMC:
-	case SCLK_EMMC_SAMPLE:
 		con = readl(&cru->cru_clksel_con[12]);
 		mux = (con & EMMC_PLL_MASK) >> EMMC_PLL_SHIFT;
 		div = (con & EMMC_DIV_MASK) >> EMMC_DIV_SHIFT;
 		break;
-	case HCLK_SDMMC:
 	case SCLK_SDMMC:
 		con = readl(&cru->cru_clksel_con[11]);
 		mux = (con & MMC0_PLL_MASK) >> MMC0_PLL_SHIFT;
@@ -306,8 +303,8 @@ static ulong rockchip_mmc_get_clk(struct rk3128_cru *cru, uint clk_general_rate,
 	return DIV_TO_RATE(src_rate, div);
 }
 
-static ulong rockchip_mmc_set_clk(struct rk3128_cru *cru, uint clk_general_rate,
-				  int periph, uint freq)
+static ulong rk3128_mmc_set_clk(struct rk3128_cru *cru, uint clk_general_rate,
+				int periph, uint freq)
 {
 	int src_clk_div;
 	int mux;
@@ -325,13 +322,12 @@ static ulong rockchip_mmc_set_clk(struct rk3128_cru *cru, uint clk_general_rate,
 	}
 
 	switch (periph) {
-	case HCLK_EMMC:
+	case SCLK_EMMC:
 		rk_clrsetreg(&cru->cru_clksel_con[12],
 			     EMMC_PLL_MASK | EMMC_DIV_MASK,
 			     mux << EMMC_PLL_SHIFT |
 			     (src_clk_div - 1) << EMMC_DIV_SHIFT);
 		break;
-	case HCLK_SDMMC:
 	case SCLK_SDMMC:
 		rk_clrsetreg(&cru->cru_clksel_con[11],
 			     MMC0_PLL_MASK | MMC0_DIV_MASK,
@@ -342,7 +338,7 @@ static ulong rockchip_mmc_set_clk(struct rk3128_cru *cru, uint clk_general_rate,
 		return -EINVAL;
 	}
 
-	return rockchip_mmc_get_clk(cru, clk_general_rate, periph);
+	return rk3128_mmc_get_clk(cru, clk_general_rate, periph);
 }
 
 static ulong rk3128_peri_get_pclk(struct rk3128_cru *cru, ulong clk_id)
@@ -483,10 +479,14 @@ static ulong rk3128_vop_get_rate(struct rk3128_cru *cru, ulong clk_id)
 static ulong rk3128_clk_get_rate(struct clk *clk)
 {
 	struct rk3128_clk_priv *priv = dev_get_priv(clk->dev);
+	ulong gclk_rate = rkclk_pll_get_rate(priv->cru, CLK_GENERAL);
 
 	switch (clk->id) {
 	case 0 ... 63:
 		return rkclk_pll_get_rate(priv->cru, clk->id);
+	case SCLK_EMMC:
+	case SCLK_SDMMC:
+		return rk3128_mmc_get_clk(priv->cru, gclk_rate, clk->id);
 	case PCLK_I2C0:
 	case PCLK_I2C1:
 	case PCLK_I2C2:
@@ -519,9 +519,10 @@ static ulong rk3128_clk_set_rate(struct clk *clk, ulong rate)
 		new_rate = rk3128_vop_set_clk(priv->cru,
 					      clk->id, rate);
 		break;
-	case HCLK_EMMC:
-		new_rate = rockchip_mmc_set_clk(priv->cru, gclk_rate,
-						clk->id, rate);
+	case SCLK_EMMC:
+	case SCLK_SDMMC:
+		new_rate = rk3128_mmc_set_clk(priv->cru, gclk_rate,
+					      clk->id, rate);
 		break;
 	case PCLK_I2C0:
 	case PCLK_I2C1:
