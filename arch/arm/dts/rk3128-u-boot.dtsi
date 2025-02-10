@@ -25,3 +25,15 @@
 &sdmmc {
 	fifo-mode;
 };
+
+&uart0 {
+	clock-frequency = <24000000>;
+};
+
+&uart1 {
+	clock-frequency = <24000000>;
+};
+
+&uart2 {
+	clock-frequency = <24000000>;
+};
