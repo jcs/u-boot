@@ -14,6 +14,14 @@
 	bootph-all;
 };
 
+&emmc {
+	fifo-mode;
+};
+
 &grf {
 	bootph-all;
+};
+
+&sdmmc {
+	fifo-mode;
 };
