@@ -584,6 +584,13 @@ static int rk3128_clk_bind(struct udevice *dev)
 		dev_set_priv(sys_child, priv);
 	}
 
+#if CONFIG_IS_ENABLED(RESET_ROCKCHIP)
+	ret = offsetof(struct rk3128_cru, cru_softrst_con[0]);
+	ret = rockchip_reset_bind(dev, ret, 9);
+	if (ret)
+		debug("Warning: software reset driver bind failed\n");
+#endif
+
 	return 0;
 }
 
