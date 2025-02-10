@@ -36,6 +36,7 @@ struct rk3128_grf {
 	unsigned int gpio3l_pull;
 	unsigned int gpio3h_pull;
 	unsigned int reserved2;
+	unsigned int acodec_con;
 	unsigned int soc_con0;
 	unsigned int soc_con1;
 	unsigned int soc_con2;
@@ -43,7 +44,7 @@ struct rk3128_grf {
 	unsigned int reserved3[6];
 	unsigned int mac_con0;
 	unsigned int mac_con1;
-	unsigned int reserved4[4];
+	unsigned int reserved4[3];
 	unsigned int uoc0_con0;
 	unsigned int reserved5;
 	unsigned int uoc1_con1;
