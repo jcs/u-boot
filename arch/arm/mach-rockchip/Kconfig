@@ -66,10 +66,23 @@ config ROCKCHIP_RK3066
 config ROCKCHIP_RK3128
 	bool "Support Rockchip RK3128"
 	select CPU_V7A
+	select BOARD_LATE_INIT
+	select CLK
+	select DM_REGULATOR_FIXED
+	select DM_RESET
+	select FIT
+	select HAS_CUSTOM_SYS_INIT_SP_ADDR
+	select PINCTRL
+	select RAM
+	select REGMAP
+	select SYSCON
+	select SYS_ARCH_TIMER
+	imply BOOTSTD_FULL
 	imply MISC
 	imply MISC_INIT_R
 	imply ROCKCHIP_EFUSE
 	imply ROCKCHIP_COMMON_BOARD
+	imply SKIP_LOWLEVEL_INIT
 	imply OF_UPSTREAM
 	help
 	  The Rockchip RK3128 is a ARM-based SoC with a quad-core Cortex-A7

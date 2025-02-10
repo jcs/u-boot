@@ -23,7 +23,10 @@ config SYS_SOC
 	default "rk3128"
 
 config SYS_MALLOC_F_LEN
-	default 0x0800
+	default 0x10000
+
+config CUSTOM_SYS_INIT_SP_ADDR
+	default 0x63f00000
 
 source "board/rockchip/evb_rk3128/Kconfig"
 
