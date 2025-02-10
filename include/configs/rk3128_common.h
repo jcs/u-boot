@@ -25,6 +25,8 @@
 #define CFG_EXTRA_ENV_SETTINGS \
 	ENV_MEM_LAYOUT_SETTINGS \
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
+	"fdt_high=0x7fffffff\0" \
+	"initrd_high=0x7fffffff\0" \
 	"partitions=" PARTS_DEFAULT \
 	"boot_targets=" BOOT_TARGETS "\0"
 
