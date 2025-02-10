@@ -66,6 +66,9 @@ config ROCKCHIP_RK3066
 config ROCKCHIP_RK3128
 	bool "Support Rockchip RK3128"
 	select CPU_V7A
+	imply MISC
+	imply MISC_INIT_R
+	imply ROCKCHIP_EFUSE
 	imply ROCKCHIP_COMMON_BOARD
 	imply OF_UPSTREAM
 	help

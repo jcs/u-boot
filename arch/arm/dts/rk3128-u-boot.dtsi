@@ -8,6 +8,11 @@
 		reg = <0x0 0x20004000 0x0 0x1000>;
 		bootph-all;
 	};
+
+	efuse: efuse@20090000 {
+		compatible = "rockchip,rk3128-efuse";
+		reg = <0x20090000 0x4000>;
+	};
 };
 
 &cru {
