@@ -22,6 +22,18 @@
 	bootph-all;
 };
 
+&pcfg_pull_default {
+	bootph-all;
+};
+
+&pcfg_pull_none {
+	bootph-all;
+};
+
+&pinctrl {
+	bootph-all;
+};
+
 &sdmmc {
 	fifo-mode;
 };
@@ -36,4 +48,8 @@
 
 &uart2 {
 	clock-frequency = <24000000>;
+};
+
+&xin24m {
+	bootph-all;
 };

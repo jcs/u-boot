@@ -5,3 +5,12 @@
 &emmc {
 	bootph-all;
 };
+
+&uart2 {
+	bootph-all;
+	status = "okay";
+};
+
+&uart2_xfer {
+	bootph-all;
+};
