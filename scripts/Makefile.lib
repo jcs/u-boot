@@ -479,7 +479,7 @@ quiet_cmd_dtb = $(quiet_cmd_dtc)
 endif
 
 $(obj)/%.dtb: $(src)/%.dts $(DTC) $(dtsi_include_list_deps) $(DT_TMP_SCHEMA) FORCE
-	$(call if_changed_dep,dtb)
+#	$(call if_changed_dep,dtb)
 
 pre-tmp = $(subst $(comma),_,$(dot-target).pre.tmp)
 dtc-tmp = $(subst $(comma),_,$(dot-target).dts.tmp)

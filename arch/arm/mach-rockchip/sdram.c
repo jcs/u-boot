@@ -109,6 +109,10 @@ static int rockchip_dram_init_banksize(void)
 	u32 calc_hash;
 	u8 i, j;
 
+gd->bd->bi_dram[0].start = 0x60000000;
+gd->bd->bi_dram[0].size = SZ_1G;
+return 0;
+
 	if (!IS_ENABLED(CONFIG_ROCKCHIP_RK3588) &&
 	    !IS_ENABLED(CONFIG_ROCKCHIP_RK3576) &&
 	    !IS_ENABLED(CONFIG_ROCKCHIP_RK3568) &&
@@ -487,6 +491,11 @@ int dram_init(void)
 
 	ret = uclass_get_device(UCLASS_RAM, 0, &dev);
 	if (ret) {
+		if (ret == -ENODEV) {
+			gd->ram_base = 0x60000000;
+			gd->ram_size = SZ_1G;
+			return 0;
+		}
 		debug("DRAM init failed: %d\n", ret);
 		return ret;
 	}

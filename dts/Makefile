@@ -46,18 +46,19 @@ endif
 
 targets += dt.dtb
 
-$(DTB): arch-dtbs $(local_dtbos)
-	$(Q)test -e $@ || (						\
-	echo >&2;							\
-	echo >&2 "Device Tree Source ($@) is not correctly specified.";	\
-	echo >&2 "Please define 'CONFIG_DEFAULT_DEVICE_TREE'";		\
-	echo >&2 "or build with 'DEVICE_TREE=<device_tree>' argument";	\
-	echo >&2;							\
-	/bin/false)
+$(DTB):
+#$(DTB): arch-dtbs $(local_dtbos)
+#	$(Q)test -e $@ || (						\
+#	echo >&2;							\
+#	echo >&2 "Device Tree Source ($@) is not correctly specified.";	\
+#	echo >&2 "Please define 'CONFIG_DEFAULT_DEVICE_TREE'";		\
+#	echo >&2 "or build with 'DEVICE_TREE=<device_tree>' argument";	\
+#	echo >&2;							\
+#	/bin/false)
 
 PHONY += arch-dtbs
 arch-dtbs:
-	$(Q)$(MAKE) $(build)=$(dt_dir) dtbs
+	#$(Q)$(MAKE) $(build)=$(dt_dir) dtbs
 
 ifneq ($(CONFIG_OF_UPSTREAM_INCLUDE_LOCAL_FALLBACK_DTBOS),)
 PHONY += local-dtbos
