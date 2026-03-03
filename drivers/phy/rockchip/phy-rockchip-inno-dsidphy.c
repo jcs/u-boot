@@ -215,6 +215,7 @@ struct inno_dsidphy {
 	void __iomem *phy_base;
 	void __iomem *host_base;
 	struct reset_ctl *rst;
+	enum phy_mode mode;
 	struct phy_configure_opts_mipi_dphy dphy_cfg;
 
 	struct clk *pll_clk;
@@ -537,6 +538,66 @@ static void inno_dsidphy_mipi_mode_enable(struct inno_dsidphy *inno)
 			LANE_EN_1 | LANE_EN_0);
 }
 
+static void inno_dsidphy_lvds_mode_enable(struct inno_dsidphy *inno)
+{
+	/*
+	 * LVDS PHY init sequence from vendor tree rk3036_lcdc.c:
+	 * rk31xx_output_lvds() + rk31xx_lvds_pwr_on()
+	 */
+
+	/* Disable digital interface first */
+	phy_update_bits(inno, REGISTER_PART_LVDS, 0x01,
+			LVDS_DIGITAL_INTERNAL_ENABLE_MASK,
+			LVDS_DIGITAL_INTERNAL_DISABLE);
+
+	/* Configure PLL: prediv=2, fbdiv=28 */
+	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x03,
+			REG_PREDIV_MASK, REG_PREDIV(2));
+	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x03,
+			REG_FBDIV_HI_MASK, REG_FBDIV_HI(28));
+	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x04,
+			REG_FBDIV_LO_MASK, REG_FBDIV_LO(28));
+
+	/* Write magic 0xfc to LVDS reg08 */
+	phy_update_bits(inno, REGISTER_PART_LVDS, 0x08, 0xff, 0xfc);
+
+	/* Set MSB_SEL and digital reset in LVDS reg00 */
+	phy_update_bits(inno, REGISTER_PART_LVDS, 0x00,
+			LVDS_DIGITAL_INTERNAL_RESET_MASK | BIT(5),
+			LVDS_DIGITAL_INTERNAL_RESET_DISABLE | BIT(5));
+
+	/* Power on PLL and LDO, release sync reset */
+	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x01,
+			REG_SYNCRST_MASK | REG_LDOPD_MASK | REG_PLLPD_MASK,
+			REG_SYNCRST_NORMAL | REG_LDOPD_POWER_ON |
+			REG_PLLPD_POWER_ON);
+
+	/* Enable LVDS lanes and PLL power */
+	phy_update_bits(inno, REGISTER_PART_LVDS, 0x0b,
+			LVDS_LANE_EN_MASK | LVDS_PLL_POWER_MASK |
+			LVDS_BANDGAP_POWER_MASK,
+			LVDS_DATA_LANE0_EN | LVDS_DATA_LANE1_EN |
+			LVDS_DATA_LANE2_EN | LVDS_DATA_LANE3_EN |
+			LVDS_CLK_LANE_EN | LVDS_PLL_POWER_ON |
+			LVDS_BANDGAP_POWER_ON);
+
+	/* Select LVDS mode */
+	phy_update_bits(inno, REGISTER_PART_LVDS, 0x03,
+			MODE_ENABLE_MASK, LVDS_MODE_ENABLE);
+
+	/* Wait for PLL lock */
+	udelay(2000);
+
+	/* Enable digital interface */
+	phy_update_bits(inno, REGISTER_PART_LVDS, 0x01,
+			LVDS_DIGITAL_INTERNAL_ENABLE_MASK,
+			LVDS_DIGITAL_INTERNAL_ENABLE);
+
+	/* NOTE: Do NOT enable analog lanes (REG0 bits [6:2]) for LVDS mode.
+	 * Vendor REG0=0x01, only POWER_WORK_ENABLE. Analog lane enables
+	 * are for MIPI mode only. */
+}
+
 static int inno_dsidphy_power_on(struct phy *phy)
 {
 	struct inno_dsidphy *inno = dev_get_priv(phy->dev);
@@ -551,7 +612,10 @@ static int inno_dsidphy_power_on(struct phy *phy)
 	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x00,
 			POWER_WORK_MASK, POWER_WORK_ENABLE);
 
-	inno_dsidphy_mipi_mode_enable(inno);
+	if (inno->mode == PHY_MODE_LVDS)
+		inno_dsidphy_lvds_mode_enable(inno);
+	else
+		inno_dsidphy_mipi_mode_enable(inno);
 
 	return 0;
 }
@@ -598,8 +662,18 @@ static int inno_dsidphy_configure(struct phy *phy, void *params)
 	return 0;
 }
 
+static int inno_dsidphy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
+{
+	struct inno_dsidphy *inno = dev_get_priv(phy->dev);
+
+	inno->mode = mode;
+
+	return 0;
+}
+
 static const struct phy_ops inno_dsidphy_ops = {
 	.configure = inno_dsidphy_configure,
+	.set_mode = inno_dsidphy_set_mode,
 	.power_on = inno_dsidphy_power_on,
 	.power_off = inno_dsidphy_power_off,
 };
