@@ -43,6 +43,8 @@ static void rkvop_enable(struct udevice *dev, ulong fbbase,
 			 const struct display_timing *edid,
 			 struct reset_ctl *dclk_rst)
 {
+	struct rkvop_driverdata *data =
+		(struct rkvop_driverdata *)dev_get_driver_data(dev);
 	struct rk_vop_priv *priv = dev_get_priv(dev);
 	struct rk3288_vop *regs = priv->regs;
 	struct rk3288_vop *win_regs = priv->regs + priv->win_offset;
@@ -51,6 +53,11 @@ static void rkvop_enable(struct udevice *dev, ulong fbbase,
 	u32 hactive = edid->hactive.typ;
 	u32 vactive = edid->vactive.typ;
 	int ret;
+
+	if (data->enable) {
+		data->enable(dev, fbbase, fb_bits_per_pixel, edid, dclk_rst);
+		return;
+	}
 
 	writel(V_ACT_WIDTH(hactive - 1) | V_ACT_HEIGHT(vactive - 1),
 	       &win_regs->win0_act_info);
@@ -124,8 +131,15 @@ static void rkvop_set_pin_polarity(struct udevice *dev,
 
 static void rkvop_enable_output(struct udevice *dev, enum vop_modes mode)
 {
+	struct rkvop_driverdata *data =
+		(struct rkvop_driverdata *)dev_get_driver_data(dev);
 	struct rk_vop_priv *priv = dev_get_priv(dev);
 	struct rk3288_vop *regs = priv->regs;
+
+	if (data->enable_output) {
+		data->enable_output(dev, mode);
+		return;
+	}
 
 	/* remove from standby */
 	clrbits_le32(&regs->sys_ctrl, V_STANDBY_EN(1));
@@ -141,12 +155,10 @@ static void rkvop_enable_output(struct udevice *dev, enum vop_modes mode)
 				V_EDP_OUT_EN(1));
 		break;
 
-#if defined(CONFIG_ROCKCHIP_RK3288)
 	case VOP_MODE_LVDS:
 		clrsetbits_le32(&regs->sys_ctrl, M_ALL_OUT_EN,
 				V_RGB_OUT_EN(1));
 		break;
-#endif
 
 	case VOP_MODE_MIPI:
 		clrsetbits_le32(&regs->sys_ctrl, M_ALL_OUT_EN,
@@ -167,6 +179,11 @@ static void rkvop_mode_set(struct udevice *dev,
 	struct rk3288_vop *dsp_regs = priv->regs + priv->dsp_offset;
 	struct rkvop_driverdata *data =
 		(struct rkvop_driverdata *)dev_get_driver_data(dev);
+
+	if (data->mode_set) {
+		data->mode_set(dev, edid, mode);
+		return;
+	}
 
 	u32 hactive = edid->hactive.typ;
 	u32 vactive = edid->vactive.typ;
@@ -324,7 +341,7 @@ static int rk_display_init(struct udevice *dev, ulong fbbase, ofnode ep_node)
 		      __func__, dev_read_name(dev), compat);
 		return -EINVAL;
 	}
-	debug("vop_id=%d\n", vop_id);
+	debug("vop mode=%d, compat=%s\n", vop_id, compat);
 
 	disp_uc_plat = dev_get_uclass_plat(disp);
 	debug("Found device '%s', disp_uc_priv=%p\n", disp->name, disp_uc_plat);
@@ -360,9 +377,7 @@ static int rk_display_init(struct udevice *dev, ulong fbbase, ofnode ep_node)
 	/* Set bitwidth for vop display according to vop mode */
 	switch (vop_id) {
 	case VOP_MODE_EDP:
-#if defined(CONFIG_ROCKCHIP_RK3288)
 	case VOP_MODE_LVDS:
-#endif
 		l2bpp = VIDEO_BPP16;
 		break;
 	case VOP_MODE_HDMI:

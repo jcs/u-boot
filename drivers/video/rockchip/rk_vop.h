@@ -26,6 +26,12 @@ struct rkvop_driverdata {
 	u32 features;
 	/* block-specific setters/getters */
 	void (*set_pin_polarity)(struct udevice *, enum vop_modes, u32);
+	/* Optional overrides for SoCs with different register layouts */
+	void (*mode_set)(struct udevice *, const struct display_timing *,
+			 enum vop_modes);
+	void (*enable)(struct udevice *, ulong, int,
+		       const struct display_timing *, struct reset_ctl *);
+	void (*enable_output)(struct udevice *, enum vop_modes);
 };
 
 /**
