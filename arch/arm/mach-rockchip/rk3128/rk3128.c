@@ -8,12 +8,34 @@
 
 #define GRF_BASE	0x20008000
 
+#define TIMER_LOAD_COUNT_L	0x00
+#define TIMER_LOAD_COUNT_H	0x04
+#define TIMER_CONTROL_REG	0x10
+
+#define TIMER_EN		0x1
+#define TIMER_FMODE		BIT(0)
+#define TIMER_RMODE		BIT(1)
+
 const char * const boot_devices[BROM_LAST_BOOTSOURCE + 1] = {
 	[BROM_BOOTSOURCE_EMMC] = "/mmc@1021c000",
 	[BROM_BOOTSOURCE_SPINOR] = "/spi@1020c000/flash@0",
 	[BROM_BOOTSOURCE_SPINAND] = "/spi@1020c000/flash@0",
 	[BROM_BOOTSOURCE_SD] = "/mmc@10214000",
 };
+
+__weak void rockchip_stimer_init(void)
+{
+	/* If Timer already enabled, don't re-init it */
+	u32 reg = readl(CONFIG_ROCKCHIP_STIMER_BASE + TIMER_CONTROL_REG);
+
+	if (reg & TIMER_EN)
+		return;
+
+	writel(0xffffffff, CONFIG_ROCKCHIP_STIMER_BASE + TIMER_LOAD_COUNT_L);
+	writel(0xffffffff, CONFIG_ROCKCHIP_STIMER_BASE + TIMER_LOAD_COUNT_H);
+	writel(TIMER_EN | TIMER_FMODE, CONFIG_ROCKCHIP_STIMER_BASE +
+	    TIMER_CONTROL_REG);
+}
 
 #if IS_ENABLED(CONFIG_DEBUG_UART_BOARD_INIT) && defined(CONFIG_DEBUG_UART_BASE)
 void board_debug_uart_init(void)
@@ -144,6 +166,9 @@ int arch_cpu_init(void)
 	rk_clrreg(&grf->soc_con0, BIT(8));
 #endif
 #endif
+
+	rockchip_stimer_init();
+
 	return 0;
 }
 #endif
