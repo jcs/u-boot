@@ -4,6 +4,7 @@
 #include <asm/arch-rockchip/bootrom.h>
 #include <asm/arch-rockchip/grf_rk3128.h>
 #include <asm/arch-rockchip/hardware.h>
+#include <fdt_simplefb.h>
 
 #define GRF_BASE	0x20008000
 
@@ -143,6 +144,18 @@ int arch_cpu_init(void)
 	rk_clrreg(&grf->soc_con0, BIT(8));
 #endif
 #endif
+	return 0;
+}
+#endif
+
+#if defined(CONFIG_OF_BOARD_SETUP)
+int ft_board_setup(void *blob, struct bd_info *bd)
+{
+	if (IS_ENABLED(CONFIG_FDT_SIMPLEFB)) {
+		fdt_simplefb_add_node(blob);
+		fdt_simplefb_enable_and_mem_rsv(blob);
+	}
+
 	return 0;
 }
 #endif
