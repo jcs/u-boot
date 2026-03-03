@@ -33,8 +33,11 @@ static int simple_panel_enable_backlight(struct udevice *dev)
 	struct simple_panel_priv *priv = dev_get_priv(dev);
 	int ret;
 
+	if (dm_gpio_is_valid(&priv->enable))
+		dm_gpio_set_value(&priv->enable, 1);
+	if (!priv->backlight)
+		return 0;
 	debug("%s: start, backlight = '%s'\n", __func__, priv->backlight->name);
-	dm_gpio_set_value(&priv->enable, 1);
 	ret = backlight_enable(priv->backlight);
 	debug("%s: done, ret = %d\n", __func__, ret);
 	if (ret)
@@ -48,8 +51,11 @@ static int simple_panel_set_backlight(struct udevice *dev, int percent)
 	struct simple_panel_priv *priv = dev_get_priv(dev);
 	int ret;
 
+	if (dm_gpio_is_valid(&priv->enable))
+		dm_gpio_set_value(&priv->enable, 1);
+	if (!priv->backlight)
+		return 0;
 	debug("%s: start, backlight = '%s'\n", __func__, priv->backlight->name);
-	dm_gpio_set_value(&priv->enable, 1);
 	ret = backlight_set_brightness(priv->backlight, percent);
 	debug("%s: done, ret = %d\n", __func__, ret);
 	if (ret)
@@ -129,6 +135,7 @@ static int simple_panel_get_display_timing(struct udevice *dev,
 	const struct simple_panel_drv_data *data =
 		(const struct simple_panel_drv_data *)dev_get_driver_data(dev);
 	const void *blob = gd->fdt_blob;
+	ofnode timing_node;
 	int ret;
 
 	/* Prefer the use of drm_display_mode if available */
@@ -140,6 +147,43 @@ static int simple_panel_get_display_timing(struct udevice *dev,
 					   0, timings);
 	if (!ret)
 		return ret;
+
+	/* Try panel-timing subnode (used by panel-lvds binding) */
+	timing_node = dev_read_subnode(dev, "panel-timing");
+	if (ofnode_valid(timing_node)) {
+		memset(timings, 0, sizeof(*timings));
+
+		timings->hback_porch.typ = ofnode_read_u32_default(
+			timing_node, "hback-porch", 0);
+		timings->hfront_porch.typ = ofnode_read_u32_default(
+			timing_node, "hfront-porch", 0);
+		timings->hactive.typ = ofnode_read_u32_default(
+			timing_node, "hactive", 0);
+		timings->hsync_len.typ = ofnode_read_u32_default(
+			timing_node, "hsync-len", 0);
+		timings->vback_porch.typ = ofnode_read_u32_default(
+			timing_node, "vback-porch", 0);
+		timings->vfront_porch.typ = ofnode_read_u32_default(
+			timing_node, "vfront-porch", 0);
+		timings->vactive.typ = ofnode_read_u32_default(
+			timing_node, "vactive", 0);
+		timings->vsync_len.typ = ofnode_read_u32_default(
+			timing_node, "vsync-len", 0);
+		timings->pixelclock.typ = ofnode_read_u32_default(
+			timing_node, "clock-frequency", 0);
+
+		timings->flags = 0;
+		if (ofnode_read_u32_default(timing_node, "hsync-active", 0))
+			timings->flags |= DISPLAY_FLAGS_HSYNC_HIGH;
+		if (ofnode_read_u32_default(timing_node, "vsync-active", 0))
+			timings->flags |= DISPLAY_FLAGS_VSYNC_HIGH;
+		if (ofnode_read_u32_default(timing_node, "de-active", 0))
+			timings->flags |= DISPLAY_FLAGS_DE_HIGH;
+		if (ofnode_read_u32_default(timing_node, "pixelclk-active", 0))
+			timings->flags |= DISPLAY_FLAGS_PIXDATA_POSEDGE;
+
+		return 0;
+	}
 
 	return simple_panel_get_edid_timing(dev, timings);
 }
