@@ -103,6 +103,13 @@ config TEGRA_KEYBOARD
 	  A matrix keyboard connected directly to the internal keyboard
 	  controller on Tegra SoCs.
 
+config TC3589X_KEYB
+	bool "Toshiba TC3589x I2C keypad controller"
+	depends on DM_KEYBOARD && DM_I2C
+	help
+	  Enable support for the Toshiba TC3589x series I2C-based keypad
+	  controller.
+
 config TWL4030_INPUT
 	bool "Enable TWL4030 Input controller"
 	help
