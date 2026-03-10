@@ -108,6 +108,9 @@ KWB_IMAGE_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := kwbimage.o
 
 ROCKCHIP_OBS = generated/lib/rc4.o rkcommon.o rkimage.o rksd.o rkspi.o
 
+hostprogs-always-$(CONFIG_ROCKCHIP_RK3128) += loaderimage
+loaderimage-objs := rockchip/loaderimage.o generated/lib/sha1.o
+
 # common objs for dumpimage and mkimage
 dumpimage-mkimage-objs := aisimage.o \
 			amlimage.o \
