@@ -15,6 +15,56 @@
 #include <spi.h>
 #include <sysreset.h>
 
+static void rk818_init_charger(struct udevice *dev)
+{
+	int val;
+
+	/* Enable gas gauge so battery detection works */
+	val = pmic_reg_read(dev, REG_GGCON);
+	if (val >= 0)
+		pmic_reg_write(dev, REG_GGCON, val | BIT(0) | BIT(3));
+
+	/* Check battery presence */
+	val = pmic_reg_read(dev, REG_GGSTS);
+	if (val >= 0 && !(val & BIT(7))) {
+		/* GGSTS says no battery; check voltage as fallback */
+		int volh = pmic_reg_read(dev, REGH_BAT_VOL);
+		int voll = pmic_reg_read(dev, REGL_BAT_VOL);
+
+		if (volh <= 0 && voll <= 0)
+			return;
+	}
+
+	/*
+	 * Configure charging: 4.2V / 1000mA.
+	 * Without this, the PMIC only trickle-charges and the power
+	 * budget with the screen on drains the battery.
+	 */
+	pmic_reg_write(dev, REG1_CHRG_CTRL,
+		       BIT(7) |		/* charge enable */
+		       0x30 |		/* 4.2V charge voltage */
+		       0x00);		/* 1000mA charge current */
+
+	/* Digital termination, 150mA threshold */
+	pmic_reg_write(dev, REG2_CHRG_CTRL,
+		       BIT(5) |		/* digital termination */
+		       BIT(6));		/* 150mA */
+
+	/* Trickle charge 60min, CC/CV timeout 5h */
+	pmic_reg_write(dev, REG3_CHRG_CTRL,
+		       BIT(0) |		/* trickle enable */
+		       BIT(1) |		/* 60 min trickle */
+		       BIT(3) |		/* CC/CV enable */
+		       BIT(4));		/* 5h CC/CV timeout */
+
+	/* USB input: 2A current limit, 4.4V voltage limit */
+	pmic_reg_write(dev, REG_USB_CTRL,
+		       0x07 |		/* 2000mA input current */
+		       (4 << 4));	/* 4.4V input voltage */
+
+	printf("RK818: battery charging enabled\n");
+}
+
 static int rk8xx_sysreset_request(struct udevice *dev, enum sysreset_t type)
 {
 	struct rk8xx_priv *priv = dev_get_priv(dev->parent);
@@ -284,6 +334,8 @@ static int rk8xx_probe(struct udevice *dev)
 	case RK818_ID:
 		on_source = RK8XX_ON_SOURCE;
 		off_source = RK8XX_OFF_SOURCE;
+		if (priv->variant == RK818_ID)
+			rk818_init_charger(dev);
 		break;
 	case RK809_ID:
 	case RK817_ID:
